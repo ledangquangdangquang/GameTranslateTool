@@ -1,0 +1,4 @@
+build/
+*.obj
+*.o
+dist/unitytl_settings.json
