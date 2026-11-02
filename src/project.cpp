@@ -1376,6 +1376,8 @@ void Project::inject(const LogFn& log) {
     }
     std::error_code ec;
     fs::path catalog = dataDir / "StreamingAssets" / "aa" / "catalog.bin";
+    fs::path catalogJson = dataDir / "StreamingAssets" / "aa" / "catalog.json";
+    bool useCatalogJson = !fs::exists(catalog, ec) && fs::exists(catalogJson, ec);
     for (auto& [file, idxs] : byFile) {
         fs::path live = dataDir / u8path(file);
         try {
@@ -1391,16 +1393,19 @@ void Project::inject(const LogFn& log) {
             Bytes out = c.save();
             uint64_t prevLive = fs::file_size(live, ec);
             write_file(live, out);
-            if (c.isBundle && fs::exists(catalog, ec) && file.find("aa") != std::string::npos) {
+            if (c.isBundle && file.find("aa") != std::string::npos && (fs::exists(catalog, ec) || useCatalogJson)) {
                 std::vector<uint64_t> sizes;
                 if (catalogSizes.count(file)) sizes.push_back(catalogSizes[file]);
                 sizes.push_back(prevLive);
                 sizes.push_back(fs::file_size(bak_of(live), ec));
-                CatalogPatch r = patch_catalog(catalog, pathstr(live.filename()), sizes, out.size());
+                const char* label = useCatalogJson ? "catalog.json" : "catalog.bin";
+                CatalogPatch r = useCatalogJson ? patch_catalog_json(catalogJson, sizes, out.size())
+                                                 : patch_catalog(catalog, pathstr(live.filename()), sizes, out.size());
                 if (r.ok) {
                     catalogSizes[file] = out.size();
-                    log("  catalog.bin: tat kiem tra CRC cho " + pathstr(live.filename()));
-                } else log("  ! catalog.bin: " + r.error + " -> game co the bao loi CRC / man hinh den");
+                    log(std::string("  ") + label + ": tat kiem tra CRC cho " + pathstr(live.filename()));
+                } else
+                    log(std::string("  ! ") + label + ": " + r.error + " -> game co the bao loi CRC / man hinh den");
             }
         } catch (const std::exception& ex) {
             log("  ! LOI khi ghi " + file + ": " + ex.what() + " (file game khong bi thay doi)");
@@ -1430,6 +1435,8 @@ void Project::inject_unity_fonts(const LogFn& log) {
     if (!wide) return;
     std::error_code ec;
     fs::path catalog = dataDir / "StreamingAssets" / "aa" / "catalog.bin";
+    fs::path catalogJson = dataDir / "StreamingAssets" / "aa" / "catalog.json";
+    bool useCatalogJson = !fs::exists(catalog, ec) && fs::exists(catalogJson, ec);
     int totalFonts = 0;
     for (auto& live : candidate_files()) {
         try {
@@ -1448,16 +1455,19 @@ void Project::inject_unity_fonts(const LogFn& log) {
             uint64_t prevLive = fs::file_size(live, ec);
             write_file(live, out);
             std::string relFile = rel(live);
-            if (c.isBundle && fs::exists(catalog, ec) && relFile.find("aa") != std::string::npos) {
+            if (c.isBundle && relFile.find("aa") != std::string::npos && (fs::exists(catalog, ec) || useCatalogJson)) {
                 std::vector<uint64_t> sizes;
                 if (catalogSizes.count(relFile)) sizes.push_back(catalogSizes[relFile]);
                 sizes.push_back(prevLive);
                 sizes.push_back(fs::file_size(bak_of(live), ec));
-                CatalogPatch r = patch_catalog(catalog, pathstr(live.filename()), sizes, out.size());
+                const char* label = useCatalogJson ? "catalog.json" : "catalog.bin";
+                CatalogPatch r = useCatalogJson ? patch_catalog_json(catalogJson, sizes, out.size())
+                                                 : patch_catalog(catalog, pathstr(live.filename()), sizes, out.size());
                 if (r.ok) {
                     catalogSizes[relFile] = out.size();
-                    log("  catalog.bin: tat kiem tra CRC cho " + pathstr(live.filename()));
-                } else log("  ! catalog.bin: " + r.error + " -> game co the bao loi CRC / man hinh den");
+                    log(std::string("  ") + label + ": tat kiem tra CRC cho " + pathstr(live.filename()));
+                } else
+                    log(std::string("  ! ") + label + ": " + r.error + " -> game co the bao loi CRC / man hinh den");
             }
         } catch (const std::exception& ex) {
             log("  ! LOI font trong " + rel(live) + ": " + ex.what());

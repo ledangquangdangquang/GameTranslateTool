@@ -62,5 +62,8 @@ Chưa làm: font CFF (`OTTO`, không có glyph ghép), font không có chữ g�
 ## 3. Định dạng còn thiếu
 
 - Bundle nén LZMA.
-- File `catalog.json` của Addressables bản cũ.
 - Dialogue System hoặc StringTable trong file bị lược bỏ typetree. Cần sinh lại typetree từ `Managed\*.dll`, hoặc tự dò cấu trúc như đã làm với I2.
+
+**File `catalog.json` của Addressables bản cũ: ĐÃ LÀM** (`patch_catalog_json` trong `src/catalog.cpp`, gọi từ
+`Project::inject`/`inject_unity_fonts` khi không có `catalog.bin`). Xem chi tiết định dạng và lý do trong
+comment đầu `src/catalog.h`, và ghi chú game **Probably Stolen** dưới đây.
